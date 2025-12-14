@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model author {
+  author_id  Int          @id @default(autoincrement())
+  full_name  String       @db.VarChar(100)
+  birth_date DateTime?    @db.Date
+  bookauthor bookauthor[]
+}
+
+model book {
+  book_id        Int          @id @default(autoincrement())
+  isbn           String       @unique @db.VarChar(20)
+  title          String       @db.VarChar(150)
+  year_published Int?
+  genre          String?      @db.VarChar(50)
+  publisher_id   Int?
+  publisher      publisher?   @relation(fields: [publisher_id], references: [publisher_id], onUpdate: NoAction)
+  bookauthor     bookauthor[]
+  copy           copy[]
+  review         review[] // <- додайте це поле
+}
+
+model bookauthor {
+  book_id   Int
+  author_id Int
+  author    author @relation(fields: [author_id], references: [author_id], onDelete: Cascade, onUpdate: NoAction)
+  book      book   @relation(fields: [book_id], references: [book_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([book_id, author_id])
+}
+
+model copy {
+  copy_id      Int      @id @default(autoincrement())
+  book_id      Int?
+  condition    String?  @db.VarChar(50)
+  is_availible Boolean? @default(true)
+  book         book?    @relation(fields: [book_id], references: [book_id], onDelete: Cascade, onUpdate: NoAction)
+  loan         loan[]
+}
+
+model fine {
+  fine_id Int     @id @default(autoincrement())
+  loan_id Int?
+  amount  Decimal @db.Decimal(10, 2)
+  loan    loan?   @relation(fields: [loan_id], references: [loan_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model loan {
+  loan_id     Int       @id @default(autoincrement())
+  copy_id     Int?
+  member_id   Int?
+  loan_date   DateTime  @db.Date
+  due_date    DateTime? @db.Date
+  return_date DateTime? @db.Date
+  fine        fine[]
+  copy        copy?     @relation(fields: [copy_id], references: [copy_id], onDelete: Cascade, onUpdate: NoAction)
+  member      member?   @relation(fields: [member_id], references: [member_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model member {
+  member_id   Int       @id @default(autoincrement())
+  full_name   String    @db.VarChar(100)
+  email       String    @unique @db.VarChar(100)
+  phone       String?   @db.VarChar(20)
+  address     String?   @db.VarChar(200)
+  member_type String?   @db.VarChar(20)
+  join_date   DateTime? @default(dbgenerated("CURRENT_DATE")) @db.Date
+  loan        loan[]
+}
+
+model publisher {
+  publisher_id     Int     @id @default(autoincrement())
+  name_and_surname String  @db.VarChar(100)
+  address          String? @db.VarChar(200)
+  phone            String? @db.VarChar(20)
+  book             book[]
+}
+
+model review {
+  id      Int     @id @default(autoincrement())
+  rating  Int
+  comment String?
+
+  book_id Int
+  book    book @relation(fields: [book_id], references: [book_id])
+}
